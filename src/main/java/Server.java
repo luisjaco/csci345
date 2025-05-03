@@ -4,11 +4,12 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
+import tools.Database;
 
 public class Server {
     private ServerSocket serverSocket;
     private boolean closed;
-
+    private Database sql;
     public static void main(String[] args) throws IOException {
         /*
         // USE THIS CODE WHEN YOU ARE USING EXTERNAL CONNECTIONS
@@ -31,6 +32,7 @@ public class Server {
     public Server(ServerSocket serverSocket) {
         this.serverSocket = serverSocket;
         closed = true;
+        sql = new Database();
     }
 
     /**
@@ -38,7 +40,9 @@ public class Server {
      */
     public void start() {
         System.out.printf("[!] Server listening on: %s:%s.\n", serverSocket.getInetAddress().getHostAddress(), serverSocket.getLocalPort());
-        System.out.println("Type [%close] to close server.");
+        System.out.println("[!] Type [%close] to close server.");
+        sql.connect(); // begin sql connection
+        sql.resetUserStatus(); // ensure all users have active=false and chatting=false
         scanExitKey(); // watch for exit key in the background
         closed = false;
         connectClients();
@@ -55,9 +59,9 @@ public class Server {
 
                 Socket socket = serverSocket.accept(); // waits for a client to connect
                 System.out.println("[!] Client connected.");
-
+                // todo, use socket.getPort() to add to the ClientConnection so that it prints the port when displaying message
                 // will create a new tools.Connection instance to handle the server-client communication
-                ClientConnection connection = new ClientConnection(socket);
+                ClientConnection connection = new ClientConnection(socket, sql);
 
                 Thread thread = new Thread(connection);
                 thread.start(); // begins a thread, client-server communication runs in parallel to the program
@@ -101,6 +105,8 @@ public class Server {
      * Will close the server.
      */
     public void close() {
+
+        // todo: close all Client connections before closing a server.
         System.out.println("[!] Closing server.");
         closed = true;
         try {
@@ -110,5 +116,7 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        sql.resetUserStatus(); // reset user
+        sql.close();
     }
 }

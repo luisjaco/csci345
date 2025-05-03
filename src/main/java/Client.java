@@ -1,4 +1,5 @@
 import java.io.*;
+import java.net.ConnectException;
 import java.net.Socket;
 import java.util.Scanner;
 
@@ -10,10 +11,14 @@ public class Client {
 
     public static void main(String[] args) throws IOException {
         // when you change to external connections, change localhost to the servers ip address.
-        Socket socket = new Socket("localhost", 65432);
-
-        Client client = new Client(socket);
-        client.start();
+        try {
+            Socket socket = new Socket("localhost", 65432);
+            Client client = new Client(socket);
+            client.start();
+        } catch (ConnectException e) {
+            System.out.println("[!] Could not connect to host.");
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -31,7 +36,8 @@ public class Client {
             InputStreamReader inputStreamReader = new InputStreamReader(socket.getInputStream());
             bufferedReader = new BufferedReader(inputStreamReader);
         } catch (IOException e) {
-            System.out.println("[!] ERROR OCCURRED INITIALIZING.");
+            System.out.println("[!] An error occurred.");
+            e.printStackTrace();
             close();
         }
     }
@@ -40,7 +46,7 @@ public class Client {
      * Connects client to server and begins communication.
      */
     public void start(){
-        System.out.printf("Client connecting to server at: %s:%s.\n", socket.getInetAddress().getHostAddress(), socket.getLocalPort());
+        System.out.printf("[!] Client connected to server at: %s:%s.\n", socket.getInetAddress().getHostAddress(), socket.getLocalPort());
         closed = false;
         read();
         send();
@@ -52,16 +58,17 @@ public class Client {
     public void send() {
         try {
             Scanner input = new Scanner(System.in);
-            while (socket.isConnected() && !closed) { // continually scans for input and sends
+            while (socket.isConnected() && !closed) {
+                // continually scans for input and sends
                 String messageToSend = input.nextLine();
-                // Read tools.Connection for description.
+                // Read tools.ClientConnection for description.
                 bufferedWriter.write(messageToSend);
                 bufferedWriter.newLine();
                 bufferedWriter.flush();
             }
         } catch (IOException e) {
             if (!closed) {
-                System.out.println("[!] ERROR OCCURRED SENDING MESSAGE.");
+                System.out.println("[!] An error occurred.");
                 e.printStackTrace();
                 close();
             }
@@ -80,10 +87,15 @@ public class Client {
                 while (socket.isConnected() && !closed) {
                     try {
                         messageFromServer = bufferedReader.readLine(); // will wait for the next line
+                        // check for exit keys that can indicate client shut down.
+                        if (messageFromServer.equals("%server_disconnect%")) {
+                            close();
+                            return;
+                        }
                         System.out.println(messageFromServer);
                     } catch (IOException e) {
                         if (!closed) {
-                            System.out.println("[!] ERROR OCCURRED READING MESSAGE.");
+                            System.out.println("[!] An error occurred while attempting to read a message.");
                             e.printStackTrace();
                             close();
                         }
@@ -97,7 +109,6 @@ public class Client {
      * Closes the client-server connection.
      */
     public void close(){
-        System.out.println("[!] Closing client.");
         closed = true;
         try {
             if (bufferedWriter != null) {
@@ -109,7 +120,9 @@ public class Client {
             if (socket != null) {
                 socket.close();
             }
+            System.out.println("[!] Successfully closed client.");
         } catch (IOException e) {
+            System.out.println("[!] An error occurred while closing the client.");
             e.printStackTrace();
         }
     }

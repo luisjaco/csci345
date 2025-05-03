@@ -7,34 +7,35 @@ import java.sql.SQLException;
 
 public class MessageTest {
     public static void main(String[] args) {
-        Database.connect();
+        Database sql = new Database();
+        sql.connect();
 
         String userA = "testUser1";
         String userB = "testUser2";
 
         // Ensure both users exist
-        if (!Database.signIn(userA, "pass1")) {
-            Database.signUp(userA, "pass1");
+        if (!sql.signIn(userA, "pass1")) {
+            sql.signUp(userA, "pass1");
         }
 
-        if (!Database.signIn(userB, "pass2")) {
-            Database.signUp(userB, "pass2");
+        if (!sql.signIn(userB, "pass2")) {
+            sql.signUp(userB, "pass2");
         }
 
         // Get their user IDs
-        int userAId = Database.getUserId(userA);
-        int userBId = Database.getUserId(userB);
+        int userAId = sql.getUserId(userA);
+        int userBId = sql.getUserId(userB);
 
         System.out.println("User IDs -> " + userA + ": " + userAId + ", " + userB + ": " + userBId);
 
         // Save a message
         String message = "Hey " + userB + ", this is a test message from " + userA + "!";
-        Database.saveMessage(userAId, userBId, message);
+        sql.saveMessage(userAId, userBId, message);
         System.out.println("[TEST] Message saved.");
 
         // Fetch and print the chat history
         System.out.println("\n[TEST] Chat history between " + userA + " and " + userB + ":");
-        ResultSet rs = Database.getMessageHistory(userAId, userBId);
+        ResultSet rs = sql.getMessageHistory(userAId, userBId);
 
         try {
             while (rs != null && rs.next()) {
