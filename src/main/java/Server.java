@@ -1,4 +1,4 @@
-package com.github.luisjaco;
+import tools.ClientConnection;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -16,26 +16,39 @@ public class Server {
         ServerSocket serverSocket = new ServerSocket(65432, 50, ip);
         */
 
-        // THIS CODE IS WITH FOR LOCALHOST, IT WILL ONLY ACCEPT LOCAL CONNECTIONS (ON YOUR MACHINE ONLY)
+        // THIS CODE IS FOR LOCALHOST, IT WILL ONLY ACCEPT LOCAL CONNECTIONS (ON YOUR MACHINE ONLY)
         ServerSocket serverSocket = new ServerSocket(65432); // COMMENT OUT IF NOT USING
 
         Server server = new Server(serverSocket);
-
         server.start();
     }
 
+    /**
+     * The Server class will host a server, which
+     * clients may connect to.
+     * @param serverSocket ServerSocket object to host server with.
+     */
     public Server(ServerSocket serverSocket) {
         this.serverSocket = serverSocket;
         closed = true;
     }
 
+    /**
+     * Starts the server.
+     */
     public void start() {
         System.out.printf("[!] Server listening on: %s:%s.\n", serverSocket.getInetAddress().getHostAddress(), serverSocket.getLocalPort());
+        System.out.println("Type [%close] to close server.");
         scanExitKey(); // watch for exit key in the background
         closed = false;
         connectClients();
     }
 
+    /**
+     * Will create new ClientConnection classes for each new
+     * connected client. The ClientConnection will handle
+     * client-server communication.
+     */
     public void connectClients() {
         try {
             while (!serverSocket.isClosed() && !closed) { // WILL LOOP INDEFINITELY, UNTIL SERVER IS CLOSED
@@ -43,16 +56,16 @@ public class Server {
                 Socket socket = serverSocket.accept(); // waits for a client to connect
                 System.out.println("[!] Client connected.");
 
-                // will create a new Connection instance to handle the server-client communication
-                Connection connection = new Connection(socket);
+                // will create a new tools.Connection instance to handle the server-client communication
+                ClientConnection connection = new ClientConnection(socket);
 
                 Thread thread = new Thread(connection);
                 thread.start(); // begins a thread, client-server communication runs in parallel to the program
             }
         } catch (IOException e) {
             /*
-             IOException will be called when the user closes. This is because serverSocket.accept() throws an IOException
-             due the socket being closed (It cannot tell we intended it to close). So we check to see if it is unexpected.
+             IOException will be called even when the user closes. This is because serverSocket.accept() throws an IOException
+             due the socket being closed (It cannot tell the client intended it to close). So we check to see if it is unexpected.
              */
             if (!closed) {
                 System.out.println("[!] ERROR OCCURRED.");
@@ -62,6 +75,10 @@ public class Server {
         }
     }
 
+    /**
+     * Waits for the user to input an exit key [%close].
+     * Once user enters the exit key, will close the server.
+     */
     public void scanExitKey() {
         // will wait for the user to enter the exit key while the program runs.
         // USER WILL TYPE %close TO CLOSE THE SERVER
@@ -80,6 +97,9 @@ public class Server {
         }).start();
     }
 
+    /**
+     * Will close the server.
+     */
     public void close() {
         System.out.println("[!] Closing server.");
         closed = true;

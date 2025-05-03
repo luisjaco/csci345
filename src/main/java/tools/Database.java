@@ -1,10 +1,7 @@
-package com.github.luisjaco;
+package tools;
 
-import java.sql.*;
-import java.sql.DriverManager;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.*;
 
 public class Database {
     public static Connection connection;
@@ -34,7 +31,7 @@ public class Database {
 
             return true;
         } catch (Exception e) {
-            System.out.println(e);
+            e.printStackTrace();
         } return false;
     }
     /**
@@ -46,7 +43,6 @@ public class Database {
      return false; // Username already taken
      }
      **/
-
     public static boolean signIn(String username, String password) {
         try {
             Connection connection = Database.connection;

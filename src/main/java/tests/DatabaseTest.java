@@ -1,4 +1,6 @@
-package com.github.luisjaco;
+package tests;
+
+import tools.Database;
 
 public class DatabaseTest {
     public static void main(String[] args) {

@@ -1,4 +1,4 @@
-package com.github.luisjaco;
+package tools;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;

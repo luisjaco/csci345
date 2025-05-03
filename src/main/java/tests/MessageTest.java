@@ -1,4 +1,6 @@
-package com.github.luisjaco;
+package tests;
+
+import tools.Database;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

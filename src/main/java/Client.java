@@ -1,5 +1,3 @@
-package com.github.luisjaco;
-
 import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
@@ -11,18 +9,23 @@ public class Client {
     private BufferedWriter bufferedWriter;
 
     public static void main(String[] args) throws IOException {
-        // TODO when you change to external connections, change localhost to the servers ip address.
+        // when you change to external connections, change localhost to the servers ip address.
         Socket socket = new Socket("localhost", 65432);
 
         Client client = new Client(socket);
         client.start();
     }
+
+    /**
+     * The Client class connects to a server.
+     * @param socket Socket to use to connect to server.
+     */
     public Client(Socket socket) {
-        this.closed = true;
+        closed = true;
         this.socket = socket;
 
         try {
-            // Read Connection for description of the following
+            // Read tools.ClientConnection for description of the following
             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(socket.getOutputStream());
             bufferedWriter = new BufferedWriter(outputStreamWriter);
             InputStreamReader inputStreamReader = new InputStreamReader(socket.getInputStream());
@@ -33,6 +36,9 @@ public class Client {
         }
     }
 
+    /**
+     * Connects client to server and begins communication.
+     */
     public void start(){
         System.out.printf("Client connecting to server at: %s:%s.\n", socket.getInetAddress().getHostAddress(), socket.getLocalPort());
         closed = false;
@@ -40,12 +46,15 @@ public class Client {
         send();
     }
 
+    /**
+     * Allows a client to send information.
+     */
     public void send() {
         try {
             Scanner input = new Scanner(System.in);
             while (socket.isConnected() && !closed) { // continually scans for input and sends
                 String messageToSend = input.nextLine();
-                // Read Connection for description.
+                // Read tools.Connection for description.
                 bufferedWriter.write(messageToSend);
                 bufferedWriter.newLine();
                 bufferedWriter.flush();
@@ -59,6 +68,9 @@ public class Client {
         }
     }
 
+    /**
+     * Parallel method, will constantly scan for messages from the server.
+     */
     public void read() {
         new Thread(new Runnable() { // continually reads messages and outputs to console
             @Override
@@ -81,6 +93,9 @@ public class Client {
         }).start();
     }
 
+    /**
+     * Closes the client-server connection.
+     */
     public void close(){
         System.out.println("[!] Closing client.");
         closed = true;

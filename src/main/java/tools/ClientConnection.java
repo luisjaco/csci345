@@ -1,20 +1,20 @@
-package com.github.luisjaco;
+package tools;
 
 import java.io.*;
 import java.net.Socket;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Connection implements Runnable {
+public class ClientConnection implements Runnable {
     private boolean closed;
     private Socket socket;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
     private String username;
 
-    public static Map<String, Connection> onlineUsers = new ConcurrentHashMap<>();
+    public static Map<String, ClientConnection> onlineUsers = new ConcurrentHashMap<>();
 
-    public Connection(Socket socket) {
+    public ClientConnection(Socket socket) {
         closed = true;
         try {
             this.socket = socket;
@@ -102,7 +102,7 @@ public class Connection implements Runnable {
         return null;
     }
 
-    public void send(Connection recipient, String message) {
+    public void send(ClientConnection recipient, String message) {
         try {
             recipient.bufferedWriter.write(message);
             recipient.bufferedWriter.newLine();
