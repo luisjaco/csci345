@@ -58,10 +58,11 @@ public class Server {
             while (!serverSocket.isClosed() && !closed) { // WILL LOOP INDEFINITELY, UNTIL SERVER IS CLOSED
 
                 Socket socket = serverSocket.accept(); // waits for a client to connect
-                System.out.println("[!] Client connected.");
                 // todo, use socket.getPort() to add to the ClientConnection so that it prints the port when displaying message
+                int clientPort = socket.getPort();
+                System.out.println("[!] Client connected on port #" + clientPort);
                 // will create a new tools.Connection instance to handle the server-client communication
-                ClientConnection connection = new ClientConnection(socket, sql);
+                ClientConnection connection = new ClientConnection(socket, sql, clientPort);
 
                 Thread thread = new Thread(connection);
                 thread.start(); // begins a thread, client-server communication runs in parallel to the program

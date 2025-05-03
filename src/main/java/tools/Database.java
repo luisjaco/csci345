@@ -109,6 +109,21 @@ public class Database {
     }
 
     /**
+     * Will update the users table and sign out a user.
+     * Sets active = false, chatting = false.
+     * @param userId User username
+     */
+    public void signOut(int userId) {
+        try {
+            //TODO FINISH
+            PreparedStatement update = connection.prepareStatement("""
+                    UPDATE """);
+        } catch (SQLException e) {
+            System.out.println("[!] An error occurred while signing a user out.");
+            e.printStackTrace();
+        }
+    }
+    /**
      * Will retrieve user id based on username.
      * @param username Username to search
      * @return User id.
