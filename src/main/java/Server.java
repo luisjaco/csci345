@@ -7,9 +7,9 @@ import java.util.Scanner;
 import tools.Database;
 
 public class Server {
-    private ServerSocket serverSocket;
+    private final ServerSocket serverSocket;
     private boolean closed;
-    private Database sql;
+    private final Database sql;
     public static void main(String[] args) throws IOException {
         /*
         // USE THIS CODE WHEN YOU ARE USING EXTERNAL CONNECTIONS
@@ -42,7 +42,7 @@ public class Server {
         System.out.printf("[!] Server listening on: %s:%s.\n", serverSocket.getInetAddress().getHostAddress(), serverSocket.getLocalPort());
         System.out.println("[!] Type [%close] to close server.");
         sql.connect(); // begin sql connection
-        sql.resetUserStatus(); // ensure all users have active=false and chatting=false
+        sql.resetDatabase(); // ensure all users have active=false and chatting=false
         scanExitKey(); // watch for exit key in the background
         closed = false;
         connectClients();
@@ -58,7 +58,6 @@ public class Server {
             while (!serverSocket.isClosed() && !closed) { // WILL LOOP INDEFINITELY, UNTIL SERVER IS CLOSED
 
                 Socket socket = serverSocket.accept(); // waits for a client to connect
-                // todo, use socket.getPort() to add to the ClientConnection so that it prints the port when displaying message
                 int clientPort = socket.getPort();
                 System.out.println("[!] Client connected on port #" + clientPort);
                 // will create a new tools.Connection instance to handle the server-client communication
@@ -87,16 +86,13 @@ public class Server {
     public void scanExitKey() {
         // will wait for the user to enter the exit key while the program runs.
         // USER WILL TYPE %close TO CLOSE THE SERVER
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Scanner input = new Scanner(System.in);
+        new Thread(() -> {
+            Scanner input = new Scanner(System.in);
 
-                while (true) { // if any other phrase is entered do nothing.
-                    if (input.nextLine().equals("%close")) {
-                        close();
-                        break;
-                    }
+            while (true) { // if any other phrase is entered do nothing.
+                if (input.nextLine().equals("%close")) {
+                    close();
+                    break;
                 }
             }
         }).start();
@@ -117,7 +113,7 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        sql.resetUserStatus(); // reset user
+        sql.resetDatabase(); // reset user
         sql.close();
     }
 }

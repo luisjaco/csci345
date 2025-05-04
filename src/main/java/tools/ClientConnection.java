@@ -2,9 +2,10 @@ package tools;
 
 import java.io.*;
 import java.net.Socket;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import tools.Database;
 
 public class ClientConnection implements Runnable {
     // keeps a list of all current users, so ClientConnection can access other values
@@ -13,13 +14,14 @@ public class ClientConnection implements Runnable {
     private Socket socket;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
-    private int port;
-    private Database sql;
+    private final int port;
+    private final Database sql;
     private int userId;
     private String username;
     private boolean signedIn;
     private boolean inChat;
-
+    // for the wait for user sequence.
+    private boolean threadRunning;
     /**
      * The ClientConnection class will handle all client-server interactions.
      * A ClientConnection can sign a user in, and relay messages to other clients.
@@ -71,16 +73,12 @@ public class ClientConnection implements Runnable {
 
             while (!closed && signedIn) {
                 userHomeMenu();
-                while (!closed && inChat) {
-                    userChatLoop();
-                }
+                // will call the userChatMenu if they connect.
             }
         }
     }
 
     private void startMenu() {
-        sendToServer("[!] Attempting to sign in client."); // will print to the server
-
         while (!closed && !signedIn) {
             send(this, """
                     x--------------------------------------------x
@@ -95,7 +93,11 @@ public class ClientConnection implements Runnable {
             switch (response) {
                 case 2 -> signInMenu();
                 case 1 -> signUpMenu();
-                case 0 -> close();
+                case 0 -> {
+                    send(this, "[!] Goodbye!");
+                    send(this, "%server_disconnect%");
+                    close();
+                }
             }
         }
     }
@@ -163,6 +165,7 @@ public class ClientConnection implements Runnable {
             String password = read();
 
             sql.signUp(username, password);
+            sendToServer("[!] New user [" + username + "] created.");
             // sign in through sql before setting up on signIn()
             sql.signIn(username, password);
             signIn(username);
@@ -199,34 +202,180 @@ public class ClientConnection implements Runnable {
     private void userHomeMenu() {
         send(this,"""
                     x--------------------------------------------x
-                               WELCOME %s
+                                       WELCOME
+                    USER [%s]
                     [2] Message a user
                     [1] Sign out
                     [0] Sign out & exit
-                    x--------------------------------------------x
-                    """.formatted(username)
+                    x--------------------------------------------x""".formatted(username)
         );
         int response = readInt(0, 2);
 
         switch (response) {
             case 2 -> connectUserMenu();
             case 1 -> signOut();
-            case 0 -> close();
+            case 0 -> {
+                send(this, "[!] Goodbye!");
+                send(this, "%server_disconnect%");
+                close();
+            }
         }
     }
 
     private void connectUserMenu() {
+        // first print all active users.
+        send(this, """
+                .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .`
+                [!] Active users:""");
+        Map<String, Integer> users = sql.getActiveUsers();
+        users.remove(username); // remove yourself from list
+        if (users.size() == 0) {
+            send(this, """
+                    [!] You are the only user online currently. Please try again later.
+                    .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .`""");
+            return; // go back to userHomeMenu()
+        }
 
+        for (String username : users.keySet()) {
+            send(this, "- " + username);
+        }
+
+        // style
+        send(this, ".` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .` .`");
+
+        // prompt user for username they want to connect with.
+        boolean gettingUser = true;
+        while (!closed && gettingUser) {
+            send(this, "[!] Enter the user you want to connect with:");
+            String username = read();
+
+            // verify user in list
+            if (users.containsKey(username)) {
+                gettingUser = false;
+                // check if user active.
+                if (sql.verifyUserChatting(username)) {
+                    send(this, "[!] " + username + " is currently in a chat with another user.");
+                }
+                send(this, """
+                        [!] Would you like to connect with %s?
+                        [1] Yes
+                        [0] No""".formatted(username));
+                int response = readInt(0, 1);
+                if (response == 1) {
+                    waitForConnection(users.get(username));
+                }
+                // else will go back to connectUserMenu()
+            }
+            else {
+                // prompt user to retry
+                send(this, """
+                        [!] Incorrect username
+                        [2] Reload active user list
+                        [1] Retry username
+                        [0] Go back""");
+                int response = readInt(0, 2);
+                switch (response) {
+                    // case 1 would just cause a loop
+                    case 2 -> {
+                        connectUserMenu();
+                        gettingUser = false; // prevent infinite looping
+                    }
+                    case 0 -> gettingUser = false;
+                }
+            }
+        }
     }
 
-    private void userChatLoop() {
-        // TODO
+    /**
+     * Will wait until a connection is made or the user quits.
+     * @param userId User id to connect to.
+     */
+    private void waitForConnection(int userId) {
+        sendToServer("[!] Attempting to connect [" + this.username + "] to [" + username + "].");
+        // send a request from this user to the other
+        ClientConnection recipient = activeUsers.get(userId);
+        sql.createRequest(this.userId, userId);
+
+        // checking if request already exists to this user
+        if (sql.verifyRequest(userId, this.userId)) {
+            sql.cancelRequest(userId, this.userId);
+            send(this, "[!] Chat begun with [" + recipient.getUsername() + "].");
+            userChatLoop(recipient);
+            // accept + cancel the request.
+        } else {
+            try {
+                send(this, "[!] Waiting for [" + username + "] to accept. Hit the enter key to cancel the request.");
+                send(recipient, "[!] User [" + username + "] is trying to connect with you!");
+
+                threadRunning = true; // for handling the thread
+                // this will wait for the user to hit the enter key to stop trying to connect.
+                new Thread(() -> {
+                    read();
+                    threadRunning = false;
+                }).start();
+
+                // now here we will attempt to complete a request every 1.5 seconds.
+                while (threadRunning && !sql.verifyRequest(userId, this.userId)) {
+                    send(this, ".");
+                    Thread.sleep(1500);
+                }
+
+                // cancel both requests once the loop ends (canceled or accepted).
+                sql.cancelRequest(userId, this.userId);
+                sql.cancelRequest(this.userId, userId);
+
+                //  if thread is still running, the request was accepted.
+                if (!threadRunning) {
+                    sendToServer("[!] User [" + username + "] canceled the request to connect.");
+                    send(recipient, "[!] User [" + username + "] cancelled their request to connect.");
+                    send(this, "[!] Canceling request.");
+                    sql.cancelRequest(this.userId, userId);
+                } else {
+                    // prompt user to hit enter (will exit the thread).
+                    send(this, "[!] User [" + recipient.getUsername() + "] accepted the request. Hit enter to begin chat.");
+                    userChatLoop(recipient);
+                }
+            } catch (InterruptedException e) {
+                sendToServer("[!] An error occurred while attempting to connect users.");
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void userChatLoop(ClientConnection recipient) {
+        // TODO ALLOW USER TO LEAVE, GET RID OF BUGS MAYBE.
+        inChat = true;
+        sql.setChatting(this.userId);
+        sendToServer("[!] User [" + username + "] has begun a chat with user [" + recipient.getUsername() + "].");
+        send(this, "[!] Type %quit to leave the chat.");
+
+        // the idea im having with %quit is that if a client sends %quit, the next client will return %client_exit%, which the
+        // server can read and then close the communication.
+        while (!closed && inChat) {
+            String message = read();
+            // timestamp
+            LocalDateTime now = LocalDateTime.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+            String time = now.format(formatter);
+
+            if (message != null) {
+                sql.saveMessage(this.userId, userId, message);
+                String completeMessage = "%s [%s]: %s".formatted(time, recipient.getUsername(), message);
+                send(this, completeMessage);
+                send(recipient, completeMessage);
+            }
+        }
     }
 
     private String read() {
         while (socket.isConnected() && !closed) {
             try {
-                return bufferedReader.readLine();
+                String message = bufferedReader.readLine();
+                if (message == null) { // means the socket doesn't exit, possible to happen in between the while loop.
+                    close();
+                } else {
+                    return message;
+                }
             } catch (IOException e) {
                 sendToServer("[!] An error occurred while reading from the client.");
                 e.printStackTrace();
@@ -244,10 +393,11 @@ public class ClientConnection implements Runnable {
      * @return Integer value within range
      */
     private int readInt(int min, int max) {
-        while (true) {
+        while (!closed) {
             String stringResponse = read();
+
             try {
-                int response = Integer.parseInt(stringResponse);
+                int response = (stringResponse == null) ? -1 : Integer.parseInt(stringResponse);
 
                 if ( (min <= response) && (response <= max) ) {
                     return response;
@@ -258,6 +408,7 @@ public class ClientConnection implements Runnable {
                 send(this, "[!] Please enter a valid integer between " + min + " and " + max + ".");
             }
         }
+        return -1;
     }
 
     /**
@@ -267,14 +418,16 @@ public class ClientConnection implements Runnable {
      * @param message Message to send
      */
     private void send(ClientConnection recipient, String message) {
-        try {
-            recipient.bufferedWriter.write(message);
-            recipient.bufferedWriter.newLine();
-            recipient.bufferedWriter.flush();
-        } catch (IOException e) {
-            sendToServer("[!] An error occurred while sending a message to the client.");
-            e.printStackTrace();
-            close();
+        if (!closed && !recipient.isClosed()) {
+            try {
+                recipient.bufferedWriter.write(message);
+                recipient.bufferedWriter.newLine();
+                recipient.bufferedWriter.flush();
+            } catch (IOException e) {
+                sendToServer("[!] An error occurred while sending a message to the client.");
+                e.printStackTrace();
+                close();
+            }
         }
     }
 
@@ -285,23 +438,39 @@ public class ClientConnection implements Runnable {
     private void sendToServer(String message) {
         System.out.println("[" + port + "]: " + message);
     }
+
+    /**
+     * Closes ClientConnection.
+     */
     private void close() {
         // send exitKey to clients so it can shut down properly
-        // TODO, this breaks if client terminates through the terminal
+        send(this, "[!] Goodbye!");
         send(this, "%server_disconnect%");
 
-        if (userId != -1) {
-            activeUsers.remove(userId);
+        closed = true;
+
+        if (signedIn) {
+            signOut();
         }
 
-        sendToServer("[!] Closing " + (signedIn ? username : "unknown user") + "'s connection.");
-        closed = true;
+        sendToServer("[!] Closing connection.");
+
         try {
             if (bufferedReader != null) bufferedReader.close();
             if (bufferedWriter != null) bufferedWriter.close();
             if (socket != null) socket.close();
         } catch (IOException e) {
+            System.out.println("An error occurred while closing client.");
             e.printStackTrace();
         }
+
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public boolean isClosed() {
+        return closed;
     }
 }
