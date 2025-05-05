@@ -2,6 +2,8 @@ package tools;
 
 import java.sql.Connection;
 import java.sql.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Database {
     private Connection connection;
@@ -115,14 +117,19 @@ public class Database {
      */
     public void signOut(int userId) {
         try {
-            //TODO FINISH
             PreparedStatement update = connection.prepareStatement("""
-                    UPDATE """);
+                    UPDATE users
+                    SET active = 0 AND chatting = 0
+                    WHERE user_id = ?""");
+            update.setInt(1, userId);
+
+            update.executeUpdate();
         } catch (SQLException e) {
             System.out.println("[!] An error occurred while signing a user out.");
             e.printStackTrace();
         }
     }
+
     /**
      * Will retrieve user id based on username.
      * @param username Username to search
@@ -148,6 +155,31 @@ public class Database {
     }
 
     /**
+     * Will return a HashMap of active users.
+     * @return HashMap of active users.
+     * (key: username, value: user id).
+     */
+    public Map<String, Integer> getActiveUsers() {
+        Map<String, Integer> result = new HashMap<>();
+        try {
+            PreparedStatement query = connection.prepareStatement("""
+                    SELECT * FROM users
+                    WHERE active=1;
+                    """);
+
+            ResultSet resultSet = query.executeQuery();
+
+            while (resultSet.next()) {
+                result.put(resultSet.getString("username"), resultSet.getInt("user_id"));
+            }
+        } catch (SQLException e) {
+            System.out.println("[!] An error occurred.");
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    /**
      * Will insert a new messages into the messages table.
      * @param senderId Sender user id
      * @param receiverId Receiver user id
@@ -162,9 +194,8 @@ public class Database {
             stmt.setString(3, content);
 
             stmt.executeUpdate();
-
         } catch (SQLException e) {
-            System.out.println("[!] ERROR SAVING MESSAGE");
+            System.out.println("[!] Error occurred while saving message.");
             e.printStackTrace();
         }
     }
@@ -227,9 +258,35 @@ public class Database {
     }
 
     /**
-     * Will reset all status on users (set active and chatting to false)
+     * Will verify whether a user is chatting or not.
+     * Will return false if a user is either not chatting or doesn't exist.
+     * @param username User username
+     * @return If user is active or false if user doesn't exist
      */
-    public void resetUserStatus() {
+    public boolean verifyUserChatting(String username) {
+        try {
+            PreparedStatement query = connection.prepareStatement("""
+                    SELECT * FROM users
+                    WHERE username = ?;""");
+            query.setString(1, username);
+
+            ResultSet resultSet = query.executeQuery();
+
+            // if result is empty this will be skipped
+            if (resultSet.next()) {
+                return resultSet.getBoolean("chatting");
+            }
+        } catch (SQLException e) {
+            System.out.println("[!] An error occurred.");
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+    /**
+     * Will reset all status on users (set active and chatting to false) and also empty the requests table.
+     */
+    public void resetDatabase() {
         try {
             /*
              If you are wondering what SQL_SAFE_UPDATES means, it basically prevents updating
@@ -238,11 +295,14 @@ public class Database {
             PreparedStatement sql_safe_off = connection.prepareStatement("SET SQL_SAFE_UPDATES = 0;");
             sql_safe_off.executeUpdate();
 
-            PreparedStatement update = connection.prepareStatement("""
+            PreparedStatement resetUsers = connection.prepareStatement("""
                     UPDATE users
                     SET active = 0 AND chatting = 0
                     """);
-            update.executeUpdate();
+            resetUsers.executeUpdate();
+
+            PreparedStatement resetRequests = connection.prepareStatement("DELETE FROM requests;");
+            resetRequests.executeUpdate();
 
             PreparedStatement sql_safe_on = connection.prepareStatement("SET SQL_SAFE_UPDATES = 1;");
             sql_safe_on.executeUpdate();
@@ -273,6 +333,92 @@ public class Database {
         }
         return false;
     }
+
+    /**
+     * Will create a request in the requests table.
+     * @param senderId User id of sender
+     * @param receiverId User id of recipient
+     */
+    public void createRequest(int senderId, int receiverId) {
+        try {
+            PreparedStatement update = connection.prepareStatement("""
+                    INSERT INTO requests (sender_id, receiver_id)
+                    VALUES (?, ?);""");
+            update.setInt(1, senderId);
+            update.setInt(2, receiverId);
+
+            update.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("[!] An error occurred.");
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Will cancel a request, if exists.
+     * @param senderId Sender id
+     * @param receiverId Receiver id
+     */
+    public void cancelRequest(int senderId, int receiverId) {
+        try {
+            PreparedStatement sql_safe_off = connection.prepareStatement("SET SQL_SAFE_UPDATES = 0;");
+            sql_safe_off.executeUpdate();
+
+            PreparedStatement update = connection.prepareStatement("""
+                        DELETE FROM requests
+                        WHERE sender_id = ? AND receiver_id = ?""");
+            update.setInt(1, senderId);
+            update.setInt(2, receiverId);
+            update.executeUpdate();
+
+            PreparedStatement sql_safe_on = connection.prepareStatement("SET SQL_SAFE_UPDATES = 1;");
+            sql_safe_on.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("[!] An error occurred");
+            e.printStackTrace();
+        }
+    }
+    /**
+     * Will verify whether a request exists or not.
+     * @param senderId Sender user id
+     * @param receiverId Receiver user id
+     * @return If the request exists.
+     */
+    public boolean verifyRequest(int senderId, int receiverId) {
+        try {
+            PreparedStatement query = connection.prepareStatement("""
+                    SELECT * FROM requests
+                    WHERE sender_id = ? AND receiver_id = ?""");
+            query.setInt(1, senderId);
+            query.setInt(2, receiverId);
+
+            ResultSet resultSet = query.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            System.out.println("[!] An error occurred");
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    /**
+     * Will set a users chatting = true
+     * @param userId User id
+     */
+    public void setChatting(int userId) {
+        try {
+            PreparedStatement update = connection.prepareStatement("""
+                    UPDATE users
+                    SET chatting = 1
+                    WHERE user_id = ?""");
+            update.setInt(1, userId);
+        } catch (SQLException e) {
+            System.out.println("[!] An error occurred.");
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Closes the database connection.
      */

@@ -4,10 +4,11 @@ import java.net.Socket;
 import java.util.Scanner;
 
 public class Client {
-    private Socket socket;
+    private final Socket socket;
     private boolean closed;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
+    private final Scanner input;
 
     public static void main(String[] args) throws IOException {
         // when you change to external connections, change localhost to the servers ip address.
@@ -28,6 +29,7 @@ public class Client {
     public Client(Socket socket) {
         closed = true;
         this.socket = socket;
+        input = new Scanner(System.in);
 
         try {
             // Read tools.ClientConnection for description of the following
@@ -57,7 +59,6 @@ public class Client {
      */
     public void send() {
         try {
-            Scanner input = new Scanner(System.in);
             while (socket.isConnected() && !closed) {
                 // continually scans for input and sends
                 String messageToSend = input.nextLine();
@@ -79,26 +80,24 @@ public class Client {
      * Parallel method, will constantly scan for messages from the server.
      */
     public void read() {
-        new Thread(new Runnable() { // continually reads messages and outputs to console
-            @Override
-            public void run() {
-                String messageFromServer;
+        // continually reads messages and outputs to console
+        new Thread(() -> {
+            String messageFromServer;
 
-                while (socket.isConnected() && !closed) {
-                    try {
-                        messageFromServer = bufferedReader.readLine(); // will wait for the next line
-                        // check for exit keys that can indicate client shut down.
-                        if (messageFromServer.equals("%server_disconnect%")) {
-                            close();
-                            return;
-                        }
-                        System.out.println(messageFromServer);
-                    } catch (IOException e) {
-                        if (!closed) {
-                            System.out.println("[!] An error occurred while attempting to read a message.");
-                            e.printStackTrace();
-                            close();
-                        }
+            while (socket.isConnected() && !closed) {
+                try {
+                    messageFromServer = bufferedReader.readLine(); // will wait for the next line
+                    // check for exit keys that can indicate client shut down.
+                    if (messageFromServer.equals("%server_disconnect%")) {
+                        close();
+                        return;
+                    }
+                    System.out.println(messageFromServer);
+                } catch (IOException e) {
+                    if (!closed) {
+                        System.out.println("[!] An error occurred while attempting to read a message.");
+                        e.printStackTrace();
+                        close();
                     }
                 }
             }
@@ -120,6 +119,7 @@ public class Client {
             if (socket != null) {
                 socket.close();
             }
+            input.close();
             System.out.println("[!] Successfully closed client.");
         } catch (IOException e) {
             System.out.println("[!] An error occurred while closing the client.");
