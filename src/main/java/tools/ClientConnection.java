@@ -361,7 +361,7 @@ public class ClientConnection implements Runnable {
             // accept + cancel the request.
         } else {
             try {
-                send(this, "[!] Waiting for [" + username + "] to accept. Hit the enter key to cancel the request.");
+                send(this, "[!] Waiting for [" + recipient.getUsername() + "] to accept. Hit the enter key to cancel the request.");
                 send(recipient, "[!] User [" + username + "] is trying to connect with you!");
 
                 threadRunning = true; // for handling the thread
@@ -423,7 +423,7 @@ public class ClientConnection implements Runnable {
                 String time = now.format(formatter);
                 // complete message
                 sql.saveMessage(this.userId, recipient.userId, message);
-                String completeMessage = "%s [%s]: %s".formatted(time, recipient.getUsername(), message);
+                String completeMessage = "%s [%s]: %s".formatted(time, username, message);
                 send(this, completeMessage);
                 send(recipient, completeMessage);
             }

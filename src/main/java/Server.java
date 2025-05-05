@@ -16,7 +16,7 @@ public class Server {
     public static void main(String[] args) throws IOException {
 
         // USE THIS CODE WHEN YOU ARE USING EXTERNAL CONNECTIONS
-        InetAddress ip = InetAddress.getByName("put ip address here");
+        InetAddress ip = InetAddress.getByName("192.168.1.7");
         ServerSocket serverSocket = new ServerSocket(65432, 50, ip);
 
 

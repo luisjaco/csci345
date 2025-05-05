@@ -13,7 +13,7 @@ public class Client {
     public static void main(String[] args) throws IOException {
         // when you change to external connections, change localhost to the servers ip address.
         try {
-            Socket socket = new Socket("localhost", 65432);
+            Socket socket = new Socket("192.168.1.7", 65432);
             Client client = new Client(socket);
             client.start();
         } catch (ConnectException e) {
