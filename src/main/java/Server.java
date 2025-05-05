@@ -5,11 +5,13 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
 import tools.Database;
+import java.util.ArrayList;
 
 public class Server {
     private final ServerSocket serverSocket;
     private boolean closed;
     private final Database sql;
+    private final ArrayList<ClientConnection> connectedClients;
     public static void main(String[] args) throws IOException {
         /*
         // USE THIS CODE WHEN YOU ARE USING EXTERNAL CONNECTIONS
@@ -33,6 +35,7 @@ public class Server {
         this.serverSocket = serverSocket;
         closed = true;
         sql = new Database();
+        connectedClients = new ArrayList<>();
     }
 
     /**
@@ -62,6 +65,7 @@ public class Server {
                 System.out.println("[!] Client connected on port #" + clientPort);
                 // will create a new tools.Connection instance to handle the server-client communication
                 ClientConnection connection = new ClientConnection(socket, sql, clientPort);
+                connectedClients.add(connection);
 
                 Thread thread = new Thread(connection);
                 thread.start(); // begins a thread, client-server communication runs in parallel to the program
@@ -103,7 +107,11 @@ public class Server {
      */
     public void close() {
 
-        // todo: close all Client connections before closing a server.
+        // close all connectedClients
+        for (ClientConnection clientConnection : connectedClients) {
+            if (!clientConnection.isClosed()) { clientConnection.close(); }
+        }
+
         System.out.println("[!] Closing server.");
         closed = true;
         try {

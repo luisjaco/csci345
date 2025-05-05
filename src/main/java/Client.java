@@ -87,12 +87,14 @@ public class Client {
             while (socket.isConnected() && !closed) {
                 try {
                     messageFromServer = bufferedReader.readLine(); // will wait for the next line
-                    // check for exit keys that can indicate client shut down.
-                    if (messageFromServer.equals("%server_disconnect%")) {
+                    if (messageFromServer == null) {
+                        System.out.println("[!] Server closed. Hit enter to end the program.");
                         close();
-                        return;
+                    } else if (messageFromServer.equals("%server_disconnect%")) { // check for exit keys that can indicate client shut down.
+                        close();
+                    } else {
+                        System.out.println(messageFromServer);
                     }
-                    System.out.println(messageFromServer);
                 } catch (IOException e) {
                     if (!closed) {
                         System.out.println("[!] An error occurred while attempting to read a message.");

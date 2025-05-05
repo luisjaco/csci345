@@ -58,18 +58,6 @@ public class Database {
         return false;
     }
 
-    // todo
-
-    /*
-     // Check if user already exists
-     PreparedStatement checkStmt = connection.prepareStatement("SELECT * FROM users WHERE username = ?");
-     checkStmt.setString(1, username);
-     ResultSet rs = checkStmt.executeQuery();
-     if (rs.next()) {
-     return false; // Username already taken
-     }
-     */
-
     /**
      * Will sign in a user.
      * Sets their active status to true once they are signed in.
@@ -200,7 +188,6 @@ public class Database {
         }
     }
 
-    // TODO could use this to make something like a retrieve previous chat feature.
     /**
      * Retrieves message history between two users.
      * @param user1Id First user
@@ -209,22 +196,20 @@ public class Database {
      */
     public ResultSet getMessageHistory(int user1Id, int user2Id) {
         try {
-            PreparedStatement stmt = connection.prepareStatement(
-                    "SELECT m.*, u1.username AS sender_name, u2.username AS receiver_name " +
-                            "FROM messages m " +
-                            "JOIN users u1 ON m.sender_id = u1.user_id " +
-                            "JOIN users u2 ON m.receiver_id = u2.user_id " +
-                            "WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) " +
-                            "ORDER BY m.timestamp ASC"
-            );
+            PreparedStatement stmt = connection.prepareStatement("""
+                    SELECT m.*, u1.username AS sender_name, u2.username AS receiver_name
+                    FROM messages m
+                    JOIN users u1 ON m.sender_id = u1.user_id
+                    JOIN users u2 ON m.receiver_id = u2.user_id
+                    WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?)
+                    ORDER BY m.timestamp ASC""");
             stmt.setInt(1, user1Id);
             stmt.setInt(2, user2Id);
             stmt.setInt(3, user2Id);
             stmt.setInt(4, user1Id);
-            System.out.println("[DEBUG] Getting message history between user " + user1Id + " and user " + user2Id);
             return stmt.executeQuery();
         } catch (SQLException e) {
-            System.out.println("[!] ERROR RETRIEVING MESSAGE HISTORY WITH USERNAMES");
+            System.out.println("[!] An error occurred.");
             e.printStackTrace();
             return null;
         }
@@ -263,6 +248,7 @@ public class Database {
      * @param username User username
      * @return If user is active or false if user doesn't exist
      */
+
     public boolean verifyUserChatting(String username) {
         try {
             PreparedStatement query = connection.prepareStatement("""
@@ -378,6 +364,7 @@ public class Database {
             e.printStackTrace();
         }
     }
+
     /**
      * Will verify whether a request exists or not.
      * @param senderId Sender user id
@@ -406,11 +393,28 @@ public class Database {
      * Will set a users chatting = true
      * @param userId User id
      */
-    public void setChatting(int userId) {
+    public void addChatting(int userId) {
         try {
             PreparedStatement update = connection.prepareStatement("""
                     UPDATE users
                     SET chatting = 1
+                    WHERE user_id = ?""");
+            update.setInt(1, userId);
+        } catch (SQLException e) {
+            System.out.println("[!] An error occurred.");
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Will set a users chatting = false
+     * @param userId User id
+     */
+    public void removeChatting(int userId) {
+        try {
+            PreparedStatement update = connection.prepareStatement("""
+                    UPDATE users
+                    SET chatting = 0
                     WHERE user_id = ?""");
             update.setInt(1, userId);
         } catch (SQLException e) {
