@@ -2,6 +2,8 @@ package tools;
 
 import java.io.*;
 import java.net.Socket;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -18,6 +20,8 @@ public class ClientConnection implements Runnable {
     private final Database sql;
     private int userId;
     private String username;
+    private String targetUsername;
+    private int targetUserId;
     private boolean signedIn;
     private boolean inChat;
     // for the wait for user sequence.
@@ -199,19 +203,67 @@ public class ClientConnection implements Runnable {
         inChat = false; // just in case
     }
 
+// SHOULD display message history with desired user from historyWithWho method
+    private void displayMsgHistory()
+    {
+        // Fetch and print the chat history
+        send(this, "\nChat history between " + username + " and " + targetUsername + ":");
+        ResultSet rs = sql.getMessageHistory(userId, targetUserId);
+        if (rs == null) {
+            send(this, "[!] No result set returned (possible DB error).");
+            return;
+        }
+
+
+        try {
+            while (rs != null && rs.next()) {
+                String sender = rs.getString("sender_name");
+                String receiver = rs.getString("receiver_name");
+                String content = rs.getString("message_content");
+                String timestamp = rs.getString("timestamp");
+
+                send(this, "[" + timestamp + "] " + sender + " ➡ " + receiver + ": " + content);
+            }
+        } catch (SQLException e) {
+            System.out.println("[!] Error reading chat history.");
+            e.printStackTrace();
+        }
+    }
+    // asks user who they want to view history with
+    private void historyWithWho()
+    {
+        send(this, "[!] Please enter the user you would like to see your message history with.");
+        String inputUsername = read();
+
+        targetUsername = inputUsername;
+        targetUserId = sql.getUserId(inputUsername);
+
+        // checks if user exists [Need to find a way to have this parameter apply to the max user id at a given time]
+        if (targetUserId <= 0) {
+            send(this,"[!] Username not found: " + targetUsername);
+        } else {
+            displayMsgHistory();
+        }
+
+
+    }
+
+
     private void userHomeMenu() {
         send(this,"""
                     x--------------------------------------------x
                                        WELCOME
                     USER [%s]
+                    [3] My Message History
                     [2] Message a user
                     [1] Sign out
                     [0] Sign out & exit
                     x--------------------------------------------x""".formatted(username)
         );
-        int response = readInt(0, 2);
+        int response = readInt(0, 3);
 
         switch (response) {
+            case 3 -> historyWithWho();
             case 2 -> connectUserMenu();
             case 1 -> signOut();
             case 0 -> {

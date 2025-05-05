@@ -211,7 +211,7 @@ public class Database {
         try {
             PreparedStatement stmt = connection.prepareStatement(
                     "SELECT m.*, u1.username AS sender_name, u2.username AS receiver_name " +
-                            "FROM message m " +
+                            "FROM messages m " +
                             "JOIN users u1 ON m.sender_id = u1.user_id " +
                             "JOIN users u2 ON m.receiver_id = u2.user_id " +
                             "WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) " +
@@ -221,12 +221,14 @@ public class Database {
             stmt.setInt(2, user2Id);
             stmt.setInt(3, user2Id);
             stmt.setInt(4, user1Id);
+            System.out.println("[DEBUG] Getting message history between user " + user1Id + " and user " + user2Id);
             return stmt.executeQuery();
         } catch (SQLException e) {
             System.out.println("[!] ERROR RETRIEVING MESSAGE HISTORY WITH USERNAMES");
             e.printStackTrace();
             return null;
         }
+
     }
 
     /**
