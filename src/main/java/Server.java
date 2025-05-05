@@ -1,6 +1,7 @@
 import tools.ClientConnection;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
@@ -13,14 +14,16 @@ public class Server {
     private final Database sql;
     private final ArrayList<ClientConnection> connectedClients;
     public static void main(String[] args) throws IOException {
-        /*
+
         // USE THIS CODE WHEN YOU ARE USING EXTERNAL CONNECTIONS
         InetAddress ip = InetAddress.getByName("put ip address here");
         ServerSocket serverSocket = new ServerSocket(65432, 50, ip);
-        */
+
 
         // THIS CODE IS FOR LOCALHOST, IT WILL ONLY ACCEPT LOCAL CONNECTIONS (ON YOUR MACHINE ONLY)
-        ServerSocket serverSocket = new ServerSocket(65432); // COMMENT OUT IF NOT USING
+        /*
+            ServerSocket serverSocket = new ServerSocket(65432); // COMMENT OUT IF NOT USING
+         */
 
         Server server = new Server(serverSocket);
         server.start();
