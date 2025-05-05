@@ -19,9 +19,9 @@ public class Client {
     private String downloadFileDirectory;
     public static void main(String[] args) throws IOException {
         // when you change to external connections, change localhost to the servers ip address.
-        String ipAddress = "64.187.247.135"; // todo SET
-        int port = 65432; // todo SET
-        String downloadFileDirectory = "/Users/luisjaco/Downloads/"; // todo SET, WHERE FILES WILL DOWNLOAD
+        String ipAddress = ""; // todo SET THE SERVER IP HERE
+        int port = 65432; // todo SET THE SERVER PORT HERE
+        String downloadFileDirectory = ""; // todo SET YOUR DOWNLOAD DIRECTORY (WHERE FILES WILL DOWNLOAD).
         try {
             Socket socket = new Socket(ipAddress, port);
             Client client = new Client(socket, downloadFileDirectory);

@@ -21,13 +21,15 @@ public class Database {
      */
     public void connect() {
         try {
-            String tailScaleIp = "100.117.12.77"; // this was the ip address for the tailscale sql
-            String otherIp = "127.100.12.77"; // this was the ip I (luis) found before testing myself
+            String tailScaleIp = "100.117.12.77"; // TODO SET YOUR DATABASE IP HERE
+            String user = "messenger_user"; // TODO ENTER YOUR DB USER HERE
+            String password = "christ_mas1990pump_kin^(@"; // TODO ENTER YOUR USER PASSWORD HERE
+            String port = "3306"; // TODO ENTER THE SQL PORT HERE
             Class.forName("com.mysql.cj.jdbc.Driver");
             connection = DriverManager.getConnection(
-                    "jdbc:mysql://" + tailScaleIp + ":3306/instant_messenger?serverTimezone=UTC&connectTimeout=5000",
-                    "messenger_user",
-                    "christ_mas1990pump_kin^(@"
+                    "jdbc:mysql://" + tailScaleIp + ":" + port + "/instant_messenger?serverTimezone=UTC&connectTimeout=5000",
+                    user,
+                    password
             );
             connected = true;
             System.out.println("[!] Connected to SQL database.");
