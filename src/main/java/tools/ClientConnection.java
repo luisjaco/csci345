@@ -26,6 +26,8 @@ public class ClientConnection implements Runnable {
     private boolean inChat;
     private boolean threadRunning; // for the wait for user sequence.
     private ClientConnection recipient;
+    private DataInputStream dataInputStream;
+    private DataOutputStream dataOutputStream;
     /**
      * The ClientConnection class will handle all client-server interactions.
      * A ClientConnection can sign a user in, and relay messages to other clients.
@@ -48,6 +50,10 @@ public class ClientConnection implements Runnable {
             this.bufferedWriter = new BufferedWriter(outputStreamWriter);
             InputStreamReader inputStreamReader = new InputStreamReader(socket.getInputStream());
             this.bufferedReader = new BufferedReader(inputStreamReader);
+
+            // todo
+            dataInputStream = new DataInputStream(socket.getInputStream());
+            dataOutputStream = new DataOutputStream(socket.getOutputStream());
 
         } catch (IOException e) {
             sendToServer("[!] An error occurred connecting to the client.");
@@ -356,7 +362,10 @@ public class ClientConnection implements Runnable {
         // checking if request already exists to this user
         if (sql.verifyRequest(userId, this.userId)) {
             sql.cancelRequest(userId, this.userId);
-            send(this, "[!] Chat begun with [" + recipient.getUsername() + "].");
+            send(this, """
+                    [!] Chat with [%s] has started.
+                    [!] Type %% + quit to exit the chat.
+                    [!] Type %% + file: + (file path) to send a file.""".formatted(recipient.getUsername()));
             userChatLoop();
             // accept + cancel the request.
         } else {
@@ -389,7 +398,11 @@ public class ClientConnection implements Runnable {
                     sql.cancelRequest(this.userId, userId);
                 } else {
                     // prompt user to hit enter (will exit the thread).
-                    send(this, "[!] User [" + recipient.getUsername() + "] accepted the request. Hit enter to begin chat.");
+                    send(this, """
+                    [!] Chat user [%s] has accepted your request
+                    [!] Type %% + quit to exit the chat.
+                    [!] Type %% + file: + (file path) to send a file.
+                    [!] Hit enter to begin the chat:""".formatted(recipient.getUsername()));
                     sendToServer("[!] User [" + username + "] has begun a chat with user [" + recipient.getUsername() + "].");
                     userChatLoop();
                 }
@@ -406,21 +419,29 @@ public class ClientConnection implements Runnable {
     private void userChatLoop() {
         inChat = true;
         sql.addChatting(this.userId);
-        send(this, "[!] Type %quit to leave the chat.");
 
         // if a user inputs
         while (!closed && inChat && recipient != null) {
             String message = read();
+
+            // timestamp
+            LocalDateTime now = LocalDateTime.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+            String time = now.format(formatter);
+
             // allow user to leave.
             if (message == null || message.equals("%quit")) {
                 closeChat();
             } else if (message.equals("")) {
                 send(this, "-");
+            } else if (message.contains("%file:")) { // handle file
+                send(recipient, message); // pass on to client to prepare for file download
+                send(this, "%user_file_ready%"); // allow client to send file.
+                passFile(recipient);
+                String sentAFileMessage = "%s [%s] sent a file!".formatted(time, username);
+                send(recipient, sentAFileMessage);
+                send(this, sentAFileMessage);
             } else if (inChat && recipient != null && recipient.isInChat()) {
-                // timestamp
-                LocalDateTime now = LocalDateTime.now();
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-                String time = now.format(formatter);
                 // complete message
                 sql.saveMessage(this.userId, recipient.userId, message);
                 String completeMessage = "%s [%s]: %s".formatted(time, username, message);
@@ -445,7 +466,8 @@ public class ClientConnection implements Runnable {
                 if (message == null) { // means the socket doesn't exit, possible to happen in between the while loop.
                     sendToServer("[!] Client disconnected forcefully.");
                     close();
-                } else {
+                }
+                else {
                     return message;
                 }
             } catch (IOException e) {
@@ -457,6 +479,36 @@ public class ClientConnection implements Runnable {
         return null;
     }
 
+
+    /**
+     * Will pass a file on to a recipient, without opening or accessing the file directly.
+     * @param recipient Client to send file
+     */
+    private void passFile(ClientConnection recipient) {
+        // if client sends %user_file:filename, server reads and passes with %user_file:filename
+        try {
+            sendToServer("[!] Reading file.");
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = dataInputStream.read(buffer)) > 0) { // will read bytes from user
+                // will write bytes to client.
+                recipient.dataOutputStream.write(buffer, 0, bytesRead);
+            }
+            sendToServer("[!] File successfully passed.");
+
+        } catch (IOException e) {
+            sendToServer("[!] Error sending file.");
+            e.printStackTrace();
+        }
+    }
+    /*
+    1. send %file% to server
+    2. server switch to using a data & file output stream
+    3. grab file
+    4. send %file% to client
+    5. client switch to using a data & file output stream
+    6. server & client switch back
+     */
     /**
      * Will continually prompt a user for an integer value until a value within the given range is provided.
      * Range in inclusive. [min <= value <= max]
@@ -557,7 +609,7 @@ public class ClientConnection implements Runnable {
                 if (!closed) {
                     send(this, "[!] Closed chat with [" + recipient.getUsername() + "].");
                 }
-                send(recipient, "[!] User [" + username + "] ended the chat. Press enter to continue.");
+                send(recipient, "[!] User [" + username + "] ended the chat.\n [!] Press enter to continue:");
                 recipient.setInChat(false);
             }
         }
