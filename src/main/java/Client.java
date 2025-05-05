@@ -21,7 +21,7 @@ public class Client {
         // when you change to external connections, change localhost to the servers ip address.
         String ipAddress = "64.187.247.135"; // todo SET
         int port = 65432; // todo SET
-        String downloadFileDirectory = ""; // todo SET, WHERE FILES WILL DOWNLOAD
+        String downloadFileDirectory = "/Users/luisjaco/Downloads/"; // todo SET, WHERE FILES WILL DOWNLOAD
         try {
             Socket socket = new Socket(ipAddress, port);
             Client client = new Client(socket, downloadFileDirectory);
@@ -31,7 +31,7 @@ public class Client {
             e.printStackTrace();
         }
     }
-
+//%file:/Users/luisjaco/Downloads/testing.txt
     /**
      * The Client class connects to a server.
      * @param socket Socket to use to connect to server.
