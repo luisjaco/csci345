@@ -1,15 +1,16 @@
 # Instant Messenger Project
 Welcome to our `Instant Messenger Project`! This project was created by Luis Jaco, Jake Rossillo, Aiden Duaz, and Daniel Felipe. This project allows many clients to connect to a
-server and message each other with ease. The server also connects to a MySQL database to manage account information and store messages.
+server and message each other with ease. The server also connects to a **MySQL** database to manage account information and store messages. You may see how this database is set using 
+[this](https://dbdiagram.io/d/csci345-68158d501ca52373f547562a) schema.
 <br><br>
 This program runs inside the terminal. A user can host a server using the `Server` class, allowing other users to connect with the `Client` class. The program then allows user to
-sign in or sign up, access message history, and initiate chats with other active users.
+sign in or sign up, access message history, and initiate chats with other active users. The `Server` class connects to a **MySQL** database
 ## Usage
 > [!NOTE]
-> To set up a Server, you must also use a proper MySQL database. You can find the DDL to create the proper database [here](./instant_messager.sql).
+> To set up a Server, you must also use a proper **MySQL** database. You can find the DDL to create the proper database [here](./instant_messager.sql).
 ### Database Class
 The `Database` class controls all sql queries and updates. `Database.connect()` must be configured before you can run a `Server`. You can achieve this by passing in the
-MySQL database **IP address**, **port**, **username**, and **password**.
+**MySQL** database **IP address**, **port**, **username**, and **password**.
 ```java
 public void connect() {
         try {
