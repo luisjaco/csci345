@@ -7,7 +7,7 @@ This program runs inside the terminal. A user can host a server using the `Serve
 sign in or sign up, access message history, and initiate chats with other active users. The `Server` class connects to a **MySQL** database
 ## Usage
 > [!NOTE]
-> To set up a Server, you must also use a proper **MySQL** database. You can find the DDL to create the proper database [here](./instant_messager.sql).
+> To set up a Server, you must also use a proper **MySQL** database. You can find the DDL to create the proper database [here](./instant_messenger.sql).
 ### Database Class
 The `Database` class controls all sql queries and updates. `Database.connect()` must be configured before you can run a `Server`. You can achieve this by passing in the
 **MySQL** database **IP address**, **port**, **username**, and **password**.
