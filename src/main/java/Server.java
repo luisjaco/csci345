@@ -14,15 +14,9 @@ public class Server {
     private final Database sql;
     private final ArrayList<ClientConnection> connectedClients;
     public static void main(String[] args) throws IOException {
-        InetAddress ip = InetAddress.getByName("64.187.247.135"); // TODO INPUT THE IP YOU WANT TO HOST ON HERE
+        InetAddress ip = InetAddress.getByName("?"); // TODO INPUT THE IP YOU WANT TO HOST ON HERE
         int port = 65432; // TODO ENTER THE SERVER PORT HERE
         ServerSocket serverSocket = new ServerSocket(port, 50, ip);
-
-        // THIS CODE IS FOR LOCALHOST, IT WILL ONLY ACCEPT LOCAL CONNECTIONS (ON YOUR MACHINE ONLY)
-        /*
-            ServerSocket serverSocket = new ServerSocket(65432); // COMMENT OUT IF NOT USING
-         */
-
         Server server = new Server(serverSocket);
         server.start();
     }

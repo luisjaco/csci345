@@ -21,13 +21,14 @@ public class Database {
      */
     public void connect() {
         try {
-            String tailScaleIp = "100.117.12.77"; // TODO SET YOUR DATABASE IP HERE
-            String user = "messenger_user"; // TODO ENTER YOUR DB USER HERE
-            String password = "christ_mas1990pump_kin^(@"; // TODO ENTER YOUR USER PASSWORD HERE
-            String port = "3306"; // TODO ENTER THE SQL PORT HERE
+            String databaseIp = "?"; // TODO SET YOUR DATABASE IP HERE
+            String port = "?"; // TODO ENTER THE SQL PORT HERE
+            String user = "?"; // TODO ENTER YOUR DB USER HERE
+            String password = "?"; // TODO ENTER YOUR USER PASSWORD HERE
             Class.forName("com.mysql.cj.jdbc.Driver");
+
             connection = DriverManager.getConnection(
-                    "jdbc:mysql://" + tailScaleIp + ":" + port + "/instant_messenger?serverTimezone=UTC&connectTimeout=5000",
+                    "jdbc:mysql://" + databaseIp + ":" + port + "/instant_messenger?serverTimezone=UTC&connectTimeout=5000",
                     user,
                     password
             );

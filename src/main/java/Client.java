@@ -12,16 +12,14 @@ public class Client {
     private DataOutputStream dataOutputStream;
     private DataInputStream dataInputStream;
     private FileOutputStream fileOutputStream;
-    private FileInputStream fileInputStream;
     private boolean canSendFile;
     private boolean waitingToSendFile;
-    private boolean awaitingFile;
-    private String downloadFileDirectory;
+    private final String downloadFileDirectory;
     public static void main(String[] args) throws IOException {
         // when you change to external connections, change localhost to the servers ip address.
-        String ipAddress = ""; // todo SET THE SERVER IP HERE
+        String ipAddress = "?"; // todo SET THE SERVER IP HERE
         int port = 65432; // todo SET THE SERVER PORT HERE
-        String downloadFileDirectory = ""; // todo SET YOUR DOWNLOAD DIRECTORY (WHERE FILES WILL DOWNLOAD).
+        String downloadFileDirectory = "?"; // todo SET YOUR DOWNLOAD DIRECTORY (WHERE FILES WILL DOWNLOAD).
         try {
             Socket socket = new Socket(ipAddress, port);
             Client client = new Client(socket, downloadFileDirectory);
@@ -124,7 +122,7 @@ public class Client {
 
         if (canSendFile) {
             try {
-                fileInputStream = new FileInputStream(file);
+                FileInputStream fileInputStream = new FileInputStream(file);
 
                 byte[] buffer = new byte[4096];
                 int bytesRead;
